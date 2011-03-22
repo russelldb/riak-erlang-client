@@ -243,4 +243,18 @@ message RpbLink {
 message RpbBucketProps {
     optional uint32 n_val = 1;
     optional bool allow_mult = 2;
+    optional bool last_write_wins = 3;
+    optional bytes r = 4;
+    optional bytes w = 5;
+    optional bytes dw = 6;
+    optional bytes rw = 7;
+    optional bytes backend = 8;
+    optional uint32 small_vclock = 9;
+    optional uint32 big_vclock = 10;
+    optional uint32 young_vclock = 11;
+    optional uint32 old_vclock = 12;
+    optional bytes chash_keyfun = 13;
+    optional bytes linkfun = 14;
+    optional bytes precommit = 15;
+    optional bytes postcommit = 16;
 }

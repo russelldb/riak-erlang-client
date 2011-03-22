@@ -237,7 +237,6 @@ pbify_rpblink({{B,K},T}) ->
 erlify_rpblink(#rpblink{bucket = B, key = K, tag = T}) ->
     {{B,K},T}.
 
-
 %% Convert an RpbBucketProps message to a property list
 erlify_rpbbucketprops(undefined) ->
     [];
@@ -254,7 +253,50 @@ erlify_rpbbucketprops(Pb) ->
                [];
            Flag ->
                {allow_mult, erlify_bool(Flag)}
+       end,
+       case Pb#rpbbucketprops.last_write_wins of 
+	   undefined ->
+	       [];
+	   LastWW ->
+	       {last_write_wins, erlify_bool(LastWW)}
+       end,
+       case Pb#rpbbucketprops.r of
+           undefined ->
+               [];
+           R ->
+               {r, normalize_rw_param(R)}
+       end,
+       case Pb#rpbbucketprops.w of
+           undefined ->
+               [];
+           W ->
+               {w, normalize_rw_param(W)}
+       end,
+       case Pb#rpbbucketprops.rw of
+           undefined ->
+               [];
+           RW ->
+               {rw, normalize_rw_param(RW)}
+       end,
+       case Pb#rpbbucketprops.dw of
+           undefined ->
+               [];
+           DW ->
+               {dw, normalize_rw_param(DW)}
+       end,
+       case Pb#rpbbucketprops.backend of
+           undefined ->
+               [];
+           Backend ->
+               {backend, Backend}
        end]).
+
+%% Convert a binary for r/w quorum to an atom or integer
+normalize_rw_param(<<"default">>) -> default;
+normalize_rw_param(<<"one">>) -> one;
+normalize_rw_param(<<"quorum">>) -> quorum;
+normalize_rw_param(<<"all">>) -> all;
+normalize_rw_param(V) -> list_to_integer(binary_to_list(V)).
 
 %% Convert a property list to an RpbBucketProps message
 pbify_rpbbucketprops(Props) ->
@@ -266,6 +308,18 @@ pbify_rpbbucketprops([{n_val, Nval} | Rest], Pb) ->
     pbify_rpbbucketprops(Rest, Pb#rpbbucketprops{n_val = Nval});
 pbify_rpbbucketprops([{allow_mult, Flag} | Rest], Pb) ->
     pbify_rpbbucketprops(Rest, Pb#rpbbucketprops{allow_mult = pbify_bool(Flag)});
+pbify_rpbbucketprops([{last_write_wins, LWW} | Rest], Pb) ->
+    pbify_rpbbucketprops(Rest, Pb#rpbbucketprops{last_write_wins = pbify_bool(LWW)});
+pbify_rpbbucketprops([{r, R} | Rest], Pb) ->
+    pbify_rpbbucketprops(Rest, Pb#rpbbucketprops{r = to_binary(R)});
+pbify_rpbbucketprops([{w, W} | Rest], Pb) ->
+    pbify_rpbbucketprops(Rest, Pb#rpbbucketprops{w = to_binary(W)});
+pbify_rpbbucketprops([{rw, RW} | Rest], Pb) ->
+    pbify_rpbbucketprops(Rest, Pb#rpbbucketprops{rw = to_binary(RW)});
+pbify_rpbbucketprops([{dw, DW} | Rest], Pb) ->
+    pbify_rpbbucketprops(Rest, Pb#rpbbucketprops{dw = to_binary(DW)});
+pbify_rpbbucketprops([{backend, Backend} | Rest], Pb) ->
+    pbify_rpbbucketprops(Rest, Pb#rpbbucketprops{backend = to_binary(Backend)});
 pbify_rpbbucketprops([_Ignore|Rest], Pb) ->
     %% Ignore any properties not explicitly part of the PB message
     pbify_rpbbucketprops(Rest, Pb).
@@ -294,7 +348,9 @@ to_binary(A) when is_atom(A) ->
 to_binary(L) when is_list(L) ->
     list_to_binary(L);
 to_binary(B) when is_binary(B) ->
-    B.
+    B;
+to_binary(I) when is_integer(I) ->
+    to_binary(integer_to_list(I)).
 
 %% ===================================================================
 %% Unit Tests
@@ -368,6 +424,26 @@ pb_test_() ->
                              riakclient_pb:decode_rpbbucketprops(
                                riakclient_pb:encode_rpbbucketprops(
                                  pbify_rpbbucketprops(Props)))),
+                  MdSame = (lists:sort(Props) =:= 
+                                lists:sort(Props2)),
+                  ?assertEqual(true, MdSame)
+              end)},
+      {"bucket props encode decode 3",
+       ?_test(begin
+                  Props = [{n_val, 33},
+                           {allow_mult, false},
+			   {last_write_wins, true},
+			   {r, default},
+			   {w, all},
+			   {rw, quorum},
+			   {dw, 4},
+			   {backend, <<"my_backend">>}],
+
+                  Props2 = erlify_rpbbucketprops(
+                             riakclient_pb:decode_rpbbucketprops(
+                               riakclient_pb:encode_rpbbucketprops(
+                                 pbify_rpbbucketprops(Props)))),
+
                   MdSame = (lists:sort(Props) =:= 
                                 lists:sort(Props2)),
                   ?assertEqual(true, MdSame)
