@@ -289,6 +289,30 @@ erlify_rpbbucketprops(Pb) ->
                [];
            Backend ->
                {backend, Backend}
+       end,
+       case Pb#rpbbucketprops.small_vclock of
+           undefined ->
+               [];
+           SVclock ->
+               {small_vclock, SVclock}
+       end,
+       case Pb#rpbbucketprops.big_vclock of
+           undefined ->
+               [];
+           BVclock ->
+               {big_vclock, BVclock}
+       end,
+       case Pb#rpbbucketprops.young_vclock of
+           undefined ->
+               [];
+           YVclock ->
+               {young_vclock, YVclock}
+       end,
+       case Pb#rpbbucketprops.old_vclock of
+           undefined ->
+               [];
+           OVclock ->
+               {old_vclock, OVclock}
        end]).
 
 %% Convert a binary for r/w quorum to an atom or integer
@@ -320,6 +344,14 @@ pbify_rpbbucketprops([{dw, DW} | Rest], Pb) ->
     pbify_rpbbucketprops(Rest, Pb#rpbbucketprops{dw = to_binary(DW)});
 pbify_rpbbucketprops([{backend, Backend} | Rest], Pb) ->
     pbify_rpbbucketprops(Rest, Pb#rpbbucketprops{backend = to_binary(Backend)});
+pbify_rpbbucketprops([{small_vclock, SVclock} | Rest], Pb) ->
+    pbify_rpbbucketprops(Rest, Pb#rpbbucketprops{small_vclock = SVclock});
+pbify_rpbbucketprops([{big_vclock, BVclock} | Rest], Pb) ->
+    pbify_rpbbucketprops(Rest, Pb#rpbbucketprops{big_vclock = BVclock});
+pbify_rpbbucketprops([{young_vclock, YVclock} | Rest], Pb) ->
+    pbify_rpbbucketprops(Rest, Pb#rpbbucketprops{young_vclock = YVclock});
+pbify_rpbbucketprops([{old_vclock, OVclock} | Rest], Pb) ->
+    pbify_rpbbucketprops(Rest, Pb#rpbbucketprops{old_vclock = OVclock});
 pbify_rpbbucketprops([_Ignore|Rest], Pb) ->
     %% Ignore any properties not explicitly part of the PB message
     pbify_rpbbucketprops(Rest, Pb).
@@ -437,7 +469,11 @@ pb_test_() ->
 			   {w, all},
 			   {rw, quorum},
 			   {dw, 4},
-			   {backend, <<"my_backend">>}],
+			   {backend, <<"my_backend">>},
+                           {small_vclock, 10},
+                           {big_vclock, 100},
+                           {young_vclock, 60},
+                           {old_vclock, 86400}],
 
                   Props2 = erlify_rpbbucketprops(
                              riakclient_pb:decode_rpbbucketprops(
